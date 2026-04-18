@@ -34,5 +34,8 @@ class RK2(TemporalIntegrator):
         mesh.apply_boundary_conditions(bcs)
 
 class RK3(TemporalIntegrator):
+    def __init__(self):
+        raise NotImplementedError()
+
     def integrate(self, mesh, physics, spatial, riemann, bcs, dt):
         pass
