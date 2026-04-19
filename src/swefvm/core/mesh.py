@@ -16,19 +16,27 @@ class Mesh(ABC):
         self.x_vals : np.ndarray
 
     @abstractmethod
-    def apply_boundary_conditions(self, boundary_conditions: Mapping[str, BoundaryCondition]):
+    def apply_boundary_conditions(self, boundary_conditions: Mapping[int, BoundaryCondition]):
         pass
 
 class Mesh1D(Mesh):
-    def __init__(self, length: float, resolution: float, initial_conditions: Callable, bed_function: Callable | None = None) -> None:
+    def __init__(self, length: float, resolution: float, initial_conditions: Callable, boundary_conditions: Mapping[int, BoundaryCondition], bed_function: Callable | None = None) -> None:
         super().__init__()
         self.length = length
         self.dx = resolution
         self.N = int(length / resolution)
+        self.bcs = boundary_conditions
 
-        #Create 2D array that is as long as the domain + 2 ghost cells
-        self.Q_array = np.zeros((self.N+2, 2))
-        self.F_array = np.zeros((self.N+2, 2))
+        self._check_bcs(self.bcs)
+
+        if len(self.bcs) > 2:
+            N_ghost = 2 + (2 * (len(self.bcs) - 2))
+        else:
+            N_ghost = 2
+
+        #Create 2D array that is as long as the domain + ghost cells
+        self.Q_array = np.zeros((self.N+N_ghost, 2))
+        self.F_array = np.zeros((self.N+N_ghost, 2))
 
         self.x_vals = np.linspace(self.dx/2, self.length - (self.dx/2), self.N)
         self.Q_array[1:-1] = initial_conditions(self.x_vals)
@@ -44,30 +52,32 @@ class Mesh1D(Mesh):
             self.zb = np.zeros((self.N+2, 1))
             self.zb_interface = np.zeros((self.N+1, 1))
 
-    def apply_boundary_conditions(self, boundary_conditions: Mapping[str, BoundaryCondition] | Mapping[str, VariableBoundaryCondition]):
-        lb = boundary_conditions["left_boundary"]
-        rb = boundary_conditions["right_boundary"]
+    def _check_bcs(self, boundary_conditions: Mapping[int, BoundaryCondition] | Mapping[str, VariableBoundaryCondition]):
+        if 0 not in boundary_conditions or -1 not in boundary_conditions:
+                    raise ValueError("Missing perimeter boundary conditions!")
 
-        if isinstance(lb, VariableBoundaryCondition):
-            lb.apply(
-                interior_slice=self.Q_array[1], 
-                ghost_slice=self.Q_array[0],
-                t=self.t
-            )
-        elif isinstance(lb, BoundaryCondition):
-            lb.apply(
-                interior_slice=self.Q_array[1], 
-                ghost_slice=self.Q_array[0], 
-            )
+    def apply_boundary_conditions(self, boundary_conditions: Mapping[int, BoundaryCondition] | Mapping[str, VariableBoundaryCondition]):
+        for index, bc in boundary_conditions.items():
+            if index == 0:
+                #Left boundary
+                interior_slice = self.Q_array[1]
+                ghost_slice = self.Q_array[0]
+            elif index == -1:
+                #Right boundary
+                interior_slice = self.Q_array[-2]
+                ghost_slice = self.Q_array[-1]  
+            else:
+                # Internal boundary
+                pass
 
-        if isinstance(rb, VariableBoundaryCondition):
-            rb.apply(
-                interior_slice=self.Q_array[-2], 
-                ghost_slice=self.Q_array[-1],
-                t=self.t
-            )
-        elif isinstance(rb, BoundaryCondition):
-            rb.apply(
-                interior_slice=self.Q_array[-2], 
-                ghost_slice=self.Q_array[-1], 
-            )
+            if isinstance(bc, VariableBoundaryCondition):
+                bc.apply(
+                    interior_slice=self.Q_array[1], 
+                    ghost_slice=self.Q_array[0],
+                    t=self.t
+                )
+            elif isinstance(bc, BoundaryCondition):
+                bc.apply(
+                    interior_slice=self.Q_array[1], 
+                    ghost_slice=self.Q_array[0], 
+                )
