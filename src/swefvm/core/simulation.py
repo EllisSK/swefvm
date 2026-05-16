@@ -1,9 +1,9 @@
 import numpy as np
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 
 from .mesh import Mesh
-from .boundaries import BoundaryCondition
+from .boundaries import BoundaryCondition, ExternalBoundary, InternalBoundary
 
 from src.swefvm.methods.spatial import SpatialReconstruction
 from src.swefvm.methods.temporal import TemporalIntegrator
@@ -11,13 +11,15 @@ from src.swefvm.methods.riemann_solvers import RiemannSolver
 from src.swefvm.physics import Physics
 
 class Simulation:
-    def __init__(self, mesh: Mesh, physics: Physics, spatial: SpatialReconstruction, temporal: TemporalIntegrator, riemann: RiemannSolver, bcs: Mapping[str, BoundaryCondition]):
+    def __init__(self, mesh: Mesh, physics: Physics, spatial: SpatialReconstruction, temporal: TemporalIntegrator, riemann: RiemannSolver, bcs: list[BoundaryCondition]):
         self.mesh = mesh
         self.physics = physics
         self.spatial = spatial
         self.temporal = temporal
         self.riemann = riemann
         self.bcs = bcs
+        self.external_bcs = [bc for bc in bcs if isinstance(bc, ExternalBoundary)]
+        self.internal_bcs = [bc for bc in bcs if isinstance(bc, InternalBoundary)]
 
         self.saved_times : dict = {}
 
@@ -42,7 +44,7 @@ class Simulation:
         if record_times:
             self.ttr = list(record_times)
 
-        self.mesh.apply_boundary_conditions(self.bcs)
+        self.mesh.apply_external_boundary_conditions(self.external_bcs)
 
         while (self.t < end_time) and (self.max_change < convergance_threshold):
             dt = self.physics.dynamic_timestep(self.mesh.Q_array, self.mesh.zb)
@@ -64,7 +66,7 @@ class Simulation:
             self.t += dt
             self.mesh.t = self.t
 
-            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.bcs, dt)
+            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.external_bcs, self.internal_bcs, dt)
 
             if record_time:
                 current_Q = self.mesh.Q_array
@@ -98,7 +100,7 @@ class Simulation:
         if record_times:
             self.ttr = list(record_times)
 
-        self.mesh.apply_boundary_conditions(self.bcs)
+        self.mesh.apply_external_boundary_conditions(self.external_bcs)
 
         yield self.t, self.mesh.Q_array
 
@@ -121,7 +123,7 @@ class Simulation:
             self.t += dt
             self.mesh.t = self.t
 
-            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.bcs, dt)
+            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.external_bcs, self.internal_bcs, dt)
 
             if record_time:
                 current_Q = self.mesh.Q_array
