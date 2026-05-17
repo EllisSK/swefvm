@@ -1,12 +1,22 @@
 import numpy as np
 import pytest
 
-from swefvm.physics.shallow_water import ShallowWater1D
+from swefvm.physics.shallow_water import ShallowWater
+
+
+class _FakeMesh:
+    def __init__(self, zb, dx=1.0):
+        self.zb = np.asarray(zb, dtype=float)
+        self.directions = (0,)
+        self._dx = dx
+
+    def spacing(self, d):
+        return self._dx
 
 
 @pytest.fixture
 def physics():
-    return ShallowWater1D(dx=1.0)
+    return ShallowWater()
 
 
 def test_flux_zero_momentum_flat_bed(physics):
@@ -36,8 +46,8 @@ def test_flux_dry_cell_no_division_error(physics):
 
 def test_source_flat_bed_no_friction_zero(physics):
     Q = np.array([[1.0, 0.5], [1.0, 0.5], [1.0, 0.5]])
-    zb = np.array([0.0, 0.0, 0.0])
-    S = physics.source(Q, zb, mannings_n=0.0)
+    mesh = _FakeMesh(zb=[0.0, 0.0, 0.0])
+    S = physics.source(Q, mesh, mannings_n=0.0)
     np.testing.assert_allclose(S, 0.0)
 
 
@@ -45,16 +55,17 @@ def test_source_sloped_bed_produces_momentum_term(physics):
     x = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
     zb = 0.1 * x
     Q = np.column_stack([np.full_like(x, 1.0), np.zeros_like(x)])
-    S = physics.source(Q, zb, mannings_n=0.0)
+    mesh = _FakeMesh(zb=zb)
+    S = physics.source(Q, mesh, mannings_n=0.0)
     np.testing.assert_allclose(S[:, 0], 0.0)
     np.testing.assert_allclose(S[:, 1], -9.81 * 1.0 * 0.1)
 
 
 def test_source_friction_opposes_flow(physics):
     Q = np.array([[1.0, 1.0], [1.0, 1.0]])
-    zb = np.array([0.0, 0.0])
-    S_no = physics.source(Q, zb, mannings_n=0.0)
-    S_fr = physics.source(Q, zb, mannings_n=0.03)
+    mesh = _FakeMesh(zb=[0.0, 0.0])
+    S_no = physics.source(Q, mesh, mannings_n=0.0)
+    S_fr = physics.source(Q, mesh, mannings_n=0.03)
     assert S_fr[0, 1] < S_no[0, 1]
 
 
@@ -75,8 +86,8 @@ def test_max_wave_speed_with_flow(physics):
 
 def test_dynamic_timestep_respects_cfl(physics):
     Q = np.array([[1.0, 0.0], [1.0, 0.0]])
-    zb = np.array([0.0, 0.0])
-    dt = physics.dynamic_timestep(Q, zb)
-    max_speed = physics.max_wave_speed(Q, zb)
-    assert dt < physics.dx / max_speed
-    assert dt == pytest.approx(physics.dx / max_speed, rel=1e-10)
+    mesh = _FakeMesh(zb=[0.0, 0.0], dx=1.0)
+    dt = physics.dynamic_timestep(Q, mesh)
+    max_speed = physics.max_wave_speed(Q, mesh.zb)
+    assert dt < mesh.spacing(0) / max_speed
+    assert dt == pytest.approx(mesh.spacing(0) / max_speed, rel=1e-10)

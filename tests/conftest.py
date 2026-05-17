@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from swefvm.core.mesh import Mesh1D
-from swefvm.physics.shallow_water import ShallowWater1D
+from swefvm.physics.shallow_water import ShallowWater
 
 
 @pytest.fixture
@@ -33,4 +33,4 @@ def mesh_sloped(flat_initial_conditions, linear_bed):
 
 @pytest.fixture
 def physics_flat(mesh_flat):
-    return ShallowWater1D(dx=mesh_flat.dx)
+    return ShallowWater()

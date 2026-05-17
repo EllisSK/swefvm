@@ -4,8 +4,8 @@ import pytest
 from swefvm.core.simulation import Simulation
 from swefvm.core.mesh import Mesh1D
 from swefvm.core.boundaries import ReflectiveBoundary, ClosedInterface
-from swefvm.physics.shallow_water import ShallowWater1D
-from swefvm.methods.spatial import MUSCL1D
+from swefvm.physics.shallow_water import ShallowWater
+from swefvm.methods.spatial import MUSCL
 from swefvm.methods.temporal import FirstOrderTemporal
 from swefvm.methods.riemann_solvers import HLLSolver
 
@@ -16,10 +16,10 @@ def _make_sim(bcs=None):
         resolution=1.0,
         initial_conditions=lambda x: np.column_stack([np.full_like(x, 1.0), np.zeros_like(x)]),
     )
-    physics = ShallowWater1D(dx=mesh.dx)
+    physics = ShallowWater()
     if bcs is None:
         bcs = [ReflectiveBoundary(0), ReflectiveBoundary(mesh.N + 1)]
-    return Simulation(mesh, physics, MUSCL1D(), FirstOrderTemporal(), HLLSolver(), bcs)
+    return Simulation(mesh, physics, MUSCL(), FirstOrderTemporal(), HLLSolver(), bcs)
 
 
 def test_simulation_separates_external_and_internal_bcs():
