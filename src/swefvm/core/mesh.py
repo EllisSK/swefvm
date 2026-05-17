@@ -54,8 +54,8 @@ class Mesh1D(Mesh):
             self.zb_interface = 0.5 * (self.zb[:-1] + self.zb[1:])
         else:
             #If no bed function, make all cells zb = 0
-            self.zb = np.zeros((self.N+2, 1))
-            self.zb_interface = np.zeros((self.N+1, 1))
+            self.zb = np.zeros((self.N+2,))
+            self.zb_interface = np.zeros((self.N+1,))
 
     def _resolve_external(self, loc: int): 
         if loc == 0: 

@@ -3,8 +3,8 @@ import matplotlib.animation as animation
 
 from collections.abc import Sequence
 
-from src.swefvm.core.simulation import Simulation
-from src.swefvm.core.mesh import Mesh1D
+from swefvm.core.simulation import Simulation
+from swefvm.core.mesh import Mesh1D
 
 class Animation1D:
     def __init__(self, simulation: Simulation, max_elevation: int | float = 1, end_time: int | float | None = None, convergance_threshold: int | float | None = None, record_times: Sequence[int | float] | None = None) -> None:
