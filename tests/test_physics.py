@@ -51,8 +51,8 @@ def test_source_sloped_bed_produces_momentum_term(physics):
 
 
 def test_source_friction_opposes_flow(physics):
-    Q = np.array([[1.0, 1.0]])
-    zb = np.array([0.0])
+    Q = np.array([[1.0, 1.0], [1.0, 1.0]])
+    zb = np.array([0.0, 0.0])
     S_no = physics.source(Q, zb, mannings_n=0.0)
     S_fr = physics.source(Q, zb, mannings_n=0.03)
     assert S_fr[0, 1] < S_no[0, 1]
