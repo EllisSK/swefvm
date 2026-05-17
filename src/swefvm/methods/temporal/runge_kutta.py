@@ -13,8 +13,8 @@ class RK2(TemporalIntegrator):
         F_int = riemann.solve(Q_L, Q_R, physics, mesh.zb_interface)
         mesh.apply_internal_boundary_conditions(F_int, Q_L, Q_R, internal_bcs)
         flux_grad = (F_int[1:] - F_int[:-1]) / mesh.dx
-        S = physics.source(Q_n, mesh.zb, mesh.mannings_n)
-        
+        S = physics.source(Q_n, mesh, mesh.mannings_n)
+
         K1 = np.zeros_like(Q_n)
         K1[1:-1] = -flux_grad + S[1:-1]
 
@@ -27,7 +27,7 @@ class RK2(TemporalIntegrator):
         F_int_star = riemann.solve(Q_L_star, Q_R_star, physics, mesh.zb_interface)
         mesh.apply_internal_boundary_conditions(F_int_star, Q_L_star, Q_R_star, internal_bcs)
         flux_grad_star = (F_int_star[1:] - F_int_star[:-1]) / mesh.dx
-        S_star = physics.source(U_star, mesh.zb, mesh.mannings_n)
+        S_star = physics.source(U_star, mesh, mesh.mannings_n)
 
         K2 = np.zeros_like(Q_n)
         K2[1:-1] = -flux_grad_star + S_star[1:-1]

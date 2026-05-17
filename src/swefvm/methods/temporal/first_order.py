@@ -12,8 +12,8 @@ class FirstOrderTemporal(TemporalIntegrator):
         F = riemann.solve(Q_L, Q_R, physics, mesh.zb_interface)
         mesh.apply_internal_boundary_conditions(F, Q_L, Q_R, internal_bcs)
         flux_grad = (F[1:] - F[:-1]) / mesh.dx
-        S = physics.source(Q_n, mesh.zb, mesh.mannings_n)
-        
+        S = physics.source(Q_n, mesh, mesh.mannings_n)
+
         Qn1 = np.zeros_like(Q_n)
         Qn1[1:-1] = -flux_grad + S[1:-1]
 
