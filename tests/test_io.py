@@ -4,9 +4,9 @@ import pytest
 
 from pathlib import Path
 
-from swefvm.utils.io import write_1D_simulation_results
+from swefvm.utils.io import write_1D_simulation_results, write_2D_simulation_results
 from swefvm.core.simulation import Simulation
-from swefvm.core.mesh import Mesh1D
+from swefvm.core.mesh import Mesh1D, Mesh2D
 from swefvm.core.boundaries import ReflectiveBoundary
 from swefvm.physics.shallow_water import ShallowWater
 from swefvm.methods.spatial import MUSCL
@@ -69,3 +69,59 @@ def test_write_1d_results_rejects_non_mesh1d():
 
     with pytest.raises(TypeError):
         write_1D_simulation_results(FakeSim(), Path("/tmp/x.csv"), name="x")
+
+
+def _completed_2d_sim():
+    mesh = Mesh2D(
+        width=5.0,
+        height=4.0,
+        resolution=1.0,
+        initial_conditions=lambda X, Y: np.stack([np.full_like(X, 1.0), np.zeros_like(X), np.zeros_like(X)], axis=-1),
+    )
+    physics = ShallowWater()
+    bcs = (
+        [ReflectiveBoundary((0, j)) for j in range(1, mesh.Ny + 1)]
+        + [ReflectiveBoundary((mesh.Nx + 1, j)) for j in range(1, mesh.Ny + 1)]
+        + [ReflectiveBoundary((i, 0)) for i in range(1, mesh.Nx + 1)]
+        + [ReflectiveBoundary((i, mesh.Ny + 1)) for i in range(1, mesh.Nx + 1)]
+    )
+    sim = Simulation(mesh, physics, MUSCL(), FirstOrderTemporal(), HLLSolver(), bcs)
+    sim.run(end_time=0.2, record_times=[0.1])
+    return sim
+
+
+def test_write_2d_results_creates_file(tmp_path):
+    sim = _completed_2d_sim()
+    output = tmp_path / "results.csv"
+    write_2D_simulation_results(sim, output, name="test_run")
+    assert output.exists()
+
+
+def test_write_2d_results_metadata_lines(tmp_path):
+    sim = _completed_2d_sim()
+    output = tmp_path / "results.csv"
+    write_2D_simulation_results(sim, output, name="test_run")
+    lines = output.read_text().splitlines()
+    assert lines[0] == "Name,Width,Height,Resolution"
+    assert lines[1] == f"test_run,{sim.mesh.width},{sim.mesh.height},{sim.mesh.dx}"
+
+
+def test_write_2d_results_dataframe_columns(tmp_path):
+    sim = _completed_2d_sim()
+    output = tmp_path / "results.csv"
+    write_2D_simulation_results(sim, output, name="test_run")
+    df = pd.read_csv(output, skiprows=3)
+    assert set(df.columns) == {"Time", "x", "y", "eta", "q_x", "q_y"}
+    assert len(df) == sim.mesh.Nx * sim.mesh.Ny * len(sim.saved_times)
+
+
+def test_write_2d_results_rejects_non_mesh2d():
+    class FakeMesh:
+        pass
+
+    class FakeSim:
+        mesh = FakeMesh()
+        saved_times = {}
+
+    with pytest.raises(TypeError):
+        write_2D_simulation_results(FakeSim(), Path("/tmp/x.csv"), name="x")
