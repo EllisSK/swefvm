@@ -2,8 +2,8 @@ import pandas as pd
 
 from pathlib import Path
 
-from src.swefvm.core.simulation import Simulation
-from src.swefvm.core.mesh import Mesh1D
+from swefvm.core.simulation import Simulation
+from swefvm.core.mesh import Mesh1D
 
 def write_1D_simulation_results(simulation: Simulation, output_path: Path, name: str):
     if not isinstance(simulation.mesh, Mesh1D):
