@@ -2,5 +2,5 @@ from abc import ABC, abstractmethod
 
 class RiemannSolver(ABC):
     @abstractmethod
-    def solve(self, Q_L, Q_R, physics, zb):
+    def solve(self, Q_L, Q_R, physics, zb, normal_idx: int = 1):
         pass
