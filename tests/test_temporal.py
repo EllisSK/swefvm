@@ -3,8 +3,8 @@ import pytest
 
 from swefvm.core.mesh import Mesh1D
 from swefvm.core.boundaries import ReflectiveBoundary
-from swefvm.physics.shallow_water import ShallowWater1D
-from swefvm.methods.spatial import MUSCL1D
+from swefvm.physics.shallow_water import ShallowWater
+from swefvm.methods.spatial import MUSCL
 from swefvm.methods.temporal import FirstOrderTemporal, RK2
 from swefvm.methods.riemann_solvers import HLLSolver
 
@@ -19,8 +19,8 @@ def _lake_at_rest_mesh():
 
 def test_first_order_temporal_preserves_lake_at_rest():
     mesh = _lake_at_rest_mesh()
-    physics = ShallowWater1D(dx=mesh.dx)
-    spatial = MUSCL1D()
+    physics = ShallowWater()
+    spatial = MUSCL()
     riemann = HLLSolver()
     integrator = FirstOrderTemporal()
     bcs = [ReflectiveBoundary(0), ReflectiveBoundary(mesh.N + 1)]
@@ -32,8 +32,8 @@ def test_first_order_temporal_preserves_lake_at_rest():
 
 def test_rk2_preserves_lake_at_rest():
     mesh = _lake_at_rest_mesh()
-    physics = ShallowWater1D(dx=mesh.dx)
-    spatial = MUSCL1D()
+    physics = ShallowWater()
+    spatial = MUSCL()
     riemann = HLLSolver()
     integrator = RK2()
     bcs = [ReflectiveBoundary(0), ReflectiveBoundary(mesh.N + 1)]
@@ -52,9 +52,9 @@ def test_first_order_temporal_changes_state_when_non_uniform():
             np.zeros_like(x),
         ]),
     )
-    physics = ShallowWater1D(dx=mesh.dx)
+    physics = ShallowWater()
     bcs = [ReflectiveBoundary(0), ReflectiveBoundary(mesh.N + 1)]
     mesh.apply_external_boundary_conditions(bcs)
     Q_before = mesh.Q_array.copy()
-    FirstOrderTemporal().integrate(mesh, physics, MUSCL1D(), HLLSolver(), bcs, [], dt=0.01)
+    FirstOrderTemporal().integrate(mesh, physics, MUSCL(), HLLSolver(), bcs, [], dt=0.01)
     assert not np.allclose(mesh.Q_array, Q_before)

@@ -47,7 +47,7 @@ class Simulation:
         self.mesh.apply_external_boundary_conditions(self.external_bcs)
 
         while (self.t < end_time) and (self.max_change < convergance_threshold):
-            dt = self.physics.dynamic_timestep(self.mesh.Q_array, self.mesh.zb)
+            dt = self.physics.dynamic_timestep(self.mesh.Q_array, self.mesh)
 
             #Flow control to determine correct timestep to capture desired times to record (ttr) or the final time
             if (self.t + dt) > end_time:
@@ -105,7 +105,7 @@ class Simulation:
         yield self.t, self.mesh.Q_array
 
         while (self.t < end_time) and (self.max_change < convergance_threshold):
-            dt = self.physics.dynamic_timestep(self.mesh.Q_array, self.mesh.zb)
+            dt = self.physics.dynamic_timestep(self.mesh.Q_array, self.mesh)
 
             if (self.t + dt) > end_time:
                 dt = end_time - self.t

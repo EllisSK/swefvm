@@ -2,12 +2,12 @@ import numpy as np
 import pytest
 
 from swefvm.methods.riemann_solvers import HLLSolver, OsherSolomonSolver
-from swefvm.physics.shallow_water import ShallowWater1D
+from swefvm.physics.shallow_water import ShallowWater
 
 
 @pytest.fixture
 def physics():
-    return ShallowWater1D(dx=1.0)
+    return ShallowWater()
 
 
 def test_hll_uniform_state_returns_physics_flux(physics):

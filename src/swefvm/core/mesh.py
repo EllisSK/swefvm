@@ -9,17 +9,33 @@ class Mesh(ABC):
         self.Q_array : np.ndarray
         self.F_array : np.ndarray
         self.zb : np.ndarray
-        self.zb_interface : np.ndarray
         self.mannings_n : float = 0.0
         self.t : float = 0.0
-        self.x_vals : np.ndarray
+
+    @property
+    @abstractmethod
+    def directions(self) -> tuple[int, ...]:
+        pass
+
+    @property
+    @abstractmethod
+    def interior_slice(self) -> tuple[slice, ...]:
+        pass
+
+    @abstractmethod
+    def spacing(self, direction: int) -> float:
+        pass
+
+    @abstractmethod
+    def interface_bed(self, direction: int) -> np.ndarray:
+        pass
 
     @abstractmethod
     def _resolve_external(self, loc):
         pass
 
     @abstractmethod
-    def _resolve_internal(self, loc, F_int: np.ndarray, Q_L: np.ndarray, Q_R: np.ndarray):
+    def _resolve_internal(self, loc, F_int: np.ndarray, Q_L: np.ndarray, Q_R: np.ndarray, direction: int):
         pass
 
     def apply_external_boundary_conditions(self, bcs: list[ExternalBoundary]):
@@ -27,10 +43,11 @@ class Mesh(ABC):
             interior, ghost, normal_idx = self._resolve_external(bc.location)
             bc.apply(interior, ghost, normal_idx, t=self.t)
 
-    def apply_internal_boundary_conditions(self, F_int: np.ndarray, Q_L: np.ndarray, Q_R: np.ndarray, bcs: list[InternalBoundary]):
-        for bc in bcs: 
-            f_view, ql_view, qr_view, zb, normal_idx = self._resolve_internal(bc.location, F_int, Q_L, Q_R)
+    def apply_internal_boundary_conditions(self, F_int: np.ndarray, Q_L: np.ndarray, Q_R: np.ndarray, bcs: list[InternalBoundary], direction: int = 0):
+        for bc in bcs:
+            f_view, ql_view, qr_view, zb, normal_idx = self._resolve_internal(bc.location, F_int, Q_L, Q_R, direction)
             bc.apply(f_view, ql_view, qr_view, zb, normal_idx, t=self.t)
+
 
 class Mesh1D(Mesh):
     def __init__(self, length: float, resolution: float, initial_conditions: Callable, bed_function: Callable | None = None) -> None:
@@ -57,15 +74,35 @@ class Mesh1D(Mesh):
             self.zb = np.zeros((self.N+2,))
             self.zb_interface = np.zeros((self.N+1,))
 
-    def _resolve_external(self, loc: int): 
-        if loc == 0: 
+    @property
+    def directions(self) -> tuple[int, ...]:
+        return (0,)
+
+    @property
+    def interior_slice(self) -> tuple[slice, ...]:
+        return (slice(1, -1),)
+
+    def spacing(self, direction: int) -> float:
+        if direction != 0:
+            raise ValueError(f"Mesh1D has no direction {direction}; valid directions are (0,)")
+        return self.dx
+
+    def interface_bed(self, direction: int) -> np.ndarray:
+        if direction != 0:
+            raise ValueError(f"Mesh1D has no direction {direction}; valid directions are (0,)")
+        return self.zb_interface
+
+    def _resolve_external(self, loc: int):
+        if loc == 0:
             return self.Q_array[1], self.Q_array[0], 1
         elif loc == self.N + 1:
             return self.Q_array[-2], self.Q_array[-1], 1
         else:
             raise ValueError(f"Location {loc} is not a valid 1D ghost-cell index (expected 0 or {self.N + 1})")
 
-    def _resolve_internal(self, loc: int, F_int: np.ndarray, Q_L: np.ndarray, Q_R: np.ndarray):
+    def _resolve_internal(self, loc: int, F_int: np.ndarray, Q_L: np.ndarray, Q_R: np.ndarray, direction: int):
+        if direction != 0:
+            raise ValueError(f"Mesh1D has no direction {direction}; valid directions are (0,)")
         if not (0 <= loc <= self.N):
             raise ValueError(f"Interface index {loc} out of range [0, {self.N}]")
         return F_int[loc], Q_L[loc], Q_R[loc], self.zb_interface[loc], 1

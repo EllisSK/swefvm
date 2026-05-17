@@ -42,6 +42,26 @@ def test_mesh1d_with_bed_function(mesh_sloped):
     np.testing.assert_allclose(mesh_sloped.zb_interface, 0.5 * (mesh_sloped.zb[:-1] + mesh_sloped.zb[1:]))
 
 
+def test_mesh1d_directions_and_spacing(mesh_flat):
+    assert mesh_flat.directions == (0,)
+    assert mesh_flat.spacing(0) == mesh_flat.dx
+    assert mesh_flat.interior_slice == (slice(1, -1),)
+
+
+def test_mesh1d_interface_bed_matches_zb_interface(mesh_sloped):
+    np.testing.assert_array_equal(mesh_sloped.interface_bed(0), mesh_sloped.zb_interface)
+
+
+def test_mesh1d_spacing_invalid_direction_raises(mesh_flat):
+    with pytest.raises(ValueError):
+        mesh_flat.spacing(1)
+
+
+def test_mesh1d_interface_bed_invalid_direction_raises(mesh_flat):
+    with pytest.raises(ValueError):
+        mesh_flat.interface_bed(1)
+
+
 def test_mesh1d_resolve_external_left(mesh_flat):
     interior, ghost, normal_idx = mesh_flat._resolve_external(0)
     assert normal_idx == 1
@@ -65,7 +85,7 @@ def test_mesh1d_resolve_internal_valid(mesh_flat):
     F = np.zeros((mesh_flat.N + 1, 2))
     Q_L = np.zeros((mesh_flat.N + 1, 2))
     Q_R = np.zeros((mesh_flat.N + 1, 2))
-    f_view, ql_view, qr_view, zb, normal_idx = mesh_flat._resolve_internal(3, F, Q_L, Q_R)
+    f_view, ql_view, qr_view, zb, normal_idx = mesh_flat._resolve_internal(3, F, Q_L, Q_R, 0)
     assert normal_idx == 1
     assert zb == mesh_flat.zb_interface[3]
     assert np.shares_memory(f_view, F)
@@ -74,4 +94,10 @@ def test_mesh1d_resolve_internal_valid(mesh_flat):
 def test_mesh1d_resolve_internal_out_of_range_raises(mesh_flat):
     F = np.zeros((mesh_flat.N + 1, 2))
     with pytest.raises(ValueError):
-        mesh_flat._resolve_internal(mesh_flat.N + 1, F, F.copy(), F.copy())
+        mesh_flat._resolve_internal(mesh_flat.N + 1, F, F.copy(), F.copy(), 0)
+
+
+def test_mesh1d_resolve_internal_invalid_direction_raises(mesh_flat):
+    F = np.zeros((mesh_flat.N + 1, 2))
+    with pytest.raises(ValueError):
+        mesh_flat._resolve_internal(3, F, F.copy(), F.copy(), 1)
