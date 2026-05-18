@@ -72,6 +72,5 @@ class ShallowWater(Physics):
 
     def dynamic_timestep(self, Q_array, mesh) -> float:
         max_speed = self.max_wave_speed(Q_array, mesh.zb)
-        min_spacing = min(mesh.spacing(d) for d in mesh.directions)
-        #Shifts result down 1 bit ensuring fp errors never take Cr over 1
-        return np.nextafter(min_spacing / max_speed, -np.inf)
+        inv_spacing_sum = sum(1.0 / mesh.spacing(d) for d in mesh.directions)
+        return np.nextafter(1.0 / (max_speed * inv_spacing_sum), -np.inf)
