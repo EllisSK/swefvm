@@ -106,3 +106,84 @@ class Mesh1D(Mesh):
         if not (0 <= loc <= self.N):
             raise ValueError(f"Interface index {loc} out of range [0, {self.N}]")
         return F_int[loc], Q_L[loc], Q_R[loc], self.zb_interface[loc], 1
+    
+
+class Mesh2D(Mesh):
+    def __init__(self, width: float, height: float, resolution: float, initial_conditions: Callable, bed_function: Callable | None = None) -> None:
+        super().__init__()
+        self.width = width
+        self.height = height
+        self.dx = resolution
+        self.dy = resolution
+        self.Nx = int(width / resolution)
+        self.Ny = int(height / resolution)
+
+        self.Q_array = np.zeros((self.Nx+2, self.Ny+2, 3))
+        self.F_array = np.zeros((self.Nx+2, self.Ny+2, 3))
+
+        self.x_vals = np.linspace(self.dx/2, self.width - (self.dx/2), self.Nx)
+        self.y_vals = np.linspace(self.dy/2, self.height - (self.dy/2), self.Ny)
+        X, Y = np.meshgrid(self.x_vals, self.y_vals, indexing="ij")
+        self.Q_array[1:-1, 1:-1] = initial_conditions(X, Y)
+
+        if bed_function:
+            x_vals = np.concatenate(([self.dx/2], self.x_vals, [self.width - (self.dx/2)]))
+            y_vals = np.concatenate(([self.dy/2], self.y_vals, [self.height - (self.dy/2)]))
+            X, Y = np.meshgrid(x_vals, y_vals, indexing="ij")
+            self.zb = bed_function(X, Y)
+            self.zb_interface_x = 0.5 * (self.zb[:-1, :] + self.zb[1:, :])
+            self.zb_interface_y = 0.5 * (self.zb[:, :-1] + self.zb[:, 1:])
+        else:
+            self.zb = np.zeros((self.Nx+2, self.Ny+2))
+            self.zb_interface_x = np.zeros((self.Nx+1, self.Ny+2))
+            self.zb_interface_y = np.zeros((self.Nx+2, self.Ny+1))
+
+    @property
+    def directions(self) -> tuple[int, ...]:
+        return (0, 1)
+
+    @property
+    def interior_slice(self) -> tuple[slice, ...]:
+        return (slice(1, -1), slice(1, -1))
+
+    def spacing(self, direction: int) -> float:
+        if direction == 0:
+            return self.dx
+        elif direction == 1:
+            return self.dy
+        else:
+            raise ValueError(f"Mesh2D has no direction {direction}; valid directions are (0, 1)")
+
+    def interface_bed(self, direction: int) -> np.ndarray:
+        if direction == 0:
+            return self.zb_interface_x
+        elif direction == 1:
+            return self.zb_interface_y
+        else:
+            raise ValueError(f"Mesh2D has no direction {direction}; valid directions are (0, 1)")
+
+    def _resolve_external(self, loc: tuple[int, int]):
+        i, j = loc
+        if i == 0 and 1 <= j <= self.Ny:
+            return self.Q_array[1, j], self.Q_array[0, j], 1
+        elif i == self.Nx + 1 and 1 <= j <= self.Ny:
+            return self.Q_array[-2, j], self.Q_array[-1, j], 1
+        elif j == 0 and 1 <= i <= self.Nx:
+            return self.Q_array[i, 1], self.Q_array[i, 0], 2
+        elif j == self.Ny + 1 and 1 <= i <= self.Nx:
+            return self.Q_array[i, -2], self.Q_array[i, -1], 2
+        else:
+            raise ValueError(f"Location {loc} is not a valid 2D ghost-cell index")
+
+    def _resolve_internal(self, loc: tuple[int, int], F_int: np.ndarray, Q_L: np.ndarray, Q_R: np.ndarray, direction: int):
+        i, j = loc
+        if direction == 0:
+            if not (0 <= i <= self.Nx and 1 <= j <= self.Ny):
+                raise ValueError(f"Interface index {loc} out of range for direction 0")
+            return F_int[i, j], Q_L[i, j], Q_R[i, j], self.zb_interface_x[i, j], 1
+        elif direction == 1:
+            if not (1 <= i <= self.Nx and 0 <= j <= self.Ny):
+                raise ValueError(f"Interface index {loc} out of range for direction 1")
+            return F_int[i, j], Q_L[i, j], Q_R[i, j], self.zb_interface_y[i, j], 2
+        else:
+            raise ValueError(f"Mesh2D has no direction {direction}; valid directions are (0, 1)")
