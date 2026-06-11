@@ -6,7 +6,7 @@ class FirstOrderTemporal(TemporalIntegrator):
     def __init__(self):
         pass
 
-    def integrate(self, mesh, physics, spatial, riemann, external_bcs, internal_bcs, dt):
+    def integrate(self, mesh, physics, spatial, riemann, external_bcs, internal_bcs, dt, source_terms=None):
         Q_n = mesh.Q_array
         interior = mesh.interior_slice
 
@@ -22,6 +22,9 @@ class FirstOrderTemporal(TemporalIntegrator):
             flux_div += np.diff(F, axis=d)[tuple(slicer)] / mesh.spacing(d)
 
         S = physics.source(Q_n, mesh, mesh.mannings_n)
+
+        for term in (source_terms or []):
+            term.apply(S, Q_n, mesh, mesh.t, dt)
 
         Qn1 = np.zeros_like(Q_n)
         Qn1[interior] = -flux_div + S[interior]
