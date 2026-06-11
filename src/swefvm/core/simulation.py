@@ -21,7 +21,7 @@ class Simulation:
         self.bcs = bcs
         self.external_bcs = [bc for bc in bcs if isinstance(bc, ExternalBoundary)]
         self.internal_bcs = [bc for bc in bcs if isinstance(bc, InternalBoundary)]
-        self.sources = sources or []
+        self.sources = sources
 
         self.saved_times : dict = {}
 
