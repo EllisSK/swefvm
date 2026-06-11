@@ -12,7 +12,7 @@ from swefvm.methods.riemann_solvers import RiemannSolver
 from swefvm.physics import Physics
 
 class Simulation:
-    def __init__(self, mesh: Mesh, physics: Physics, spatial: SpatialReconstruction, temporal: TemporalIntegrator, riemann: RiemannSolver, bcs: list[BoundaryCondition], sources: list[SourceTerm]):
+    def __init__(self, mesh: Mesh, physics: Physics, spatial: SpatialReconstruction, temporal: TemporalIntegrator, riemann: RiemannSolver, bcs: list[BoundaryCondition], sources: list[SourceTerm] = []):
         self.mesh = mesh
         self.physics = physics
         self.spatial = spatial
