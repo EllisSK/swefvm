@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from .mesh import Mesh
 from .boundaries import BoundaryCondition, ExternalBoundary, InternalBoundary
+from .source import SourceTerm
 
 from swefvm.methods.spatial import SpatialReconstruction
 from swefvm.methods.temporal import TemporalIntegrator
@@ -11,7 +12,7 @@ from swefvm.methods.riemann_solvers import RiemannSolver
 from swefvm.physics import Physics
 
 class Simulation:
-    def __init__(self, mesh: Mesh, physics: Physics, spatial: SpatialReconstruction, temporal: TemporalIntegrator, riemann: RiemannSolver, bcs: list[BoundaryCondition]):
+    def __init__(self, mesh: Mesh, physics: Physics, spatial: SpatialReconstruction, temporal: TemporalIntegrator, riemann: RiemannSolver, bcs: list[BoundaryCondition], sources: list[SourceTerm]):
         self.mesh = mesh
         self.physics = physics
         self.spatial = spatial
@@ -20,6 +21,7 @@ class Simulation:
         self.bcs = bcs
         self.external_bcs = [bc for bc in bcs if isinstance(bc, ExternalBoundary)]
         self.internal_bcs = [bc for bc in bcs if isinstance(bc, InternalBoundary)]
+        self.sources = sources or []
 
         self.saved_times : dict = {}
 
@@ -66,7 +68,7 @@ class Simulation:
             self.t += dt
             self.mesh.t = self.t
 
-            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.external_bcs, self.internal_bcs, dt)
+            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.external_bcs, self.internal_bcs, dt, self.sources)
 
             if record_time:
                 current_Q = self.mesh.Q_array
@@ -123,7 +125,7 @@ class Simulation:
             self.t += dt
             self.mesh.t = self.t
 
-            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.external_bcs, self.internal_bcs, dt)
+            self.temporal.integrate(self.mesh, self.physics, self.spatial, self.riemann, self.external_bcs, self.internal_bcs, dt, self.sources)
 
             if record_time:
                 current_Q = self.mesh.Q_array

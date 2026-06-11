@@ -6,7 +6,7 @@ class RK2(TemporalIntegrator):
     def __init__(self):
         pass
 
-    def integrate(self, mesh, physics, spatial, riemann, external_bcs, internal_bcs, dt):
+    def integrate(self, mesh, physics, spatial, riemann, external_bcs, internal_bcs, dt, source_terms=None):
         Q_n = mesh.Q_array
         interior = mesh.interior_slice
 
@@ -22,6 +22,9 @@ class RK2(TemporalIntegrator):
             flux_div += np.diff(F_int, axis=d)[tuple(slicer)] / mesh.spacing(d)
 
         S = physics.source(Q_n, mesh, mesh.mannings_n)
+
+        for term in (source_terms or []):
+            term.apply(S, Q_n, mesh, mesh.t, dt)
 
         K1 = np.zeros_like(Q_n)
         K1[interior] = -flux_div + S[interior]
@@ -43,6 +46,9 @@ class RK2(TemporalIntegrator):
             flux_div_star += np.diff(F_int_star, axis=d)[tuple(slicer)] / mesh.spacing(d)
 
         S_star = physics.source(U_star, mesh, mesh.mannings_n)
+
+        for term in (source_terms or []):
+            term.apply(S_star, U_star, mesh, mesh.t, dt)
 
         K2 = np.zeros_like(Q_n)
         K2[interior] = -flux_div_star + S_star[interior]
